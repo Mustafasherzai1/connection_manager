@@ -1,0 +1,358 @@
+﻿<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Migration Audit</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .audit-filter-btn { border: 0; background: transparent; padding: 0 2px; margin-left: 6px; color: #94a3b8; }
+    .audit-filter-badge { font-size: 11px; vertical-align: middle; }
+
+    /* ── Unified modal (same as KW Planning) ── */
+    .modal-bg {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.62); z-index: 1050;
+      overflow-y: auto;
+    }
+    .modal-bg.show { display: block; }
+    .modal-panel {
+      max-width: 1060px; margin: 24px auto;
+      border-radius: 14px;
+      background: var(--card-bg, #181a1e); padding: 20px 24px 24px;
+      border: 1px solid var(--border, #333);
+      margin-bottom: 40px;
+    }
+    .modal-panel .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 10px; margin-bottom: 16px;
+    }
+    .modal-panel .modal-header h3 { margin: 0; font-size: 1.1rem; }
+
+    /* ── Form Section (same as install form) ── */
+    .form-section {
+      margin-bottom: 16px; padding: 14px 16px; border-radius: 10px;
+      background: var(--surface-2, #23262b); border: 1px solid var(--border, #333);
+    }
+    .form-section-title {
+      font-size: .85rem; font-weight: 700; margin-bottom: 10px;
+      color: var(--text-muted, #999); text-transform: uppercase; letter-spacing: .04em;
+    }
+    .form-row {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px; margin-bottom: 8px;
+    }
+    .form-row label {
+      display: block; font-size: .78rem; font-weight: 600;
+      color: var(--text-muted, #999); margin-bottom: 3px;
+    }
+    .form-row .span-2 { grid-column: span 2; }
+
+    /* ── Info Note ── */
+    .info-note {
+      padding: 8px 14px; border-radius: 8px; font-size: .82rem;
+      background: rgba(59,130,246,.1); border: 1px solid rgba(59,130,246,.25);
+      color: #93c5fd; margin-bottom: 12px;
+    }
+
+    /* ── Port Grid (cassette style – same as KW Planning) ── */
+    .cassette-row {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px; align-items: start;
+    }
+    .cassette {
+      border: 1px solid var(--border, #333); border-radius: 10px;
+      padding: 10px; background: var(--surface-3, #31343a);
+    }
+    .cassette h4 {
+      font-size: .78rem; font-weight: 700; margin: 0 0 6px;
+      color: var(--text-muted, #999);
+    }
+    .ports-grid {
+      display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px;
+    }
+    .pbtn {
+      border: 1px solid rgba(148,163,184,.3); border-radius: 8px;
+      padding: 6px 0; font-weight: 700; cursor: pointer;
+      font-size: 11px; color: #e2e8f0; text-align: center;
+      background: transparent; transition: .12s;
+    }
+    .pbtn.free {
+      background: rgba(16,185,129,.18); border-color: rgba(16,185,129,.45);
+    }
+    .pbtn.free:hover {
+      background: rgba(16,185,129,.35); transform: translateY(-1px);
+    }
+    .pbtn.occ {
+      background: rgba(239,68,68,.15); border-color: rgba(239,68,68,.4);
+      cursor: not-allowed; opacity: .85;
+    }
+    .pbtn.na {
+      background: rgba(148,163,184,.08); border-color: rgba(148,163,184,.2);
+      cursor: not-allowed; opacity: .7;
+    }
+    .pbtn.sel {
+      outline: 3px solid rgba(59,130,246,.45);
+      box-shadow: 0 0 0 1px rgba(59,130,246,.25);
+    }
+    .port-grid-wrap {
+      margin-top: 8px; max-height: 340px; overflow-y: auto;
+      padding-right: 4px;
+    }
+    .port-grid-wrap::-webkit-scrollbar { width: 5px; }
+    .port-grid-wrap::-webkit-scrollbar-thumb { background: var(--border, #444); border-radius: 4px; }
+
+    /* ── Autocomplete ── */
+    .autocomplete-list {
+      display: none; position: absolute; left: 0; right: 0; top: 100%;
+      z-index: 300; max-height: 200px; overflow-y: auto;
+      background: var(--surface-3, #31343a); border: 1px solid var(--border, #444);
+      border-radius: 0 0 8px 8px; box-shadow: 0 6px 18px rgba(0,0,0,.4);
+    }
+    .autocomplete-list.show { display: block; }
+    .autocomplete-item {
+      padding: 7px 12px; cursor: pointer; font-size: .84rem;
+      color: var(--text, #e0e0e0); transition: background .1s;
+    }
+    .autocomplete-item:hover, .autocomplete-item.active {
+      background: var(--primary, #3b82f6); color: #fff;
+    }
+    .autocomplete-item .ac-sub {
+      font-size: .72rem; color: var(--text-muted, #999); margin-left: 6px;
+    }
+    .autocomplete-item:hover .ac-sub { color: rgba(255,255,255,.7); }
+
+    /* ── Auto-fill result ── */
+    .auto-fill-result {
+      padding: 10px 14px; border-radius: 8px; margin-top: 8px;
+      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.25);
+      font-size: .84rem;
+    }
+    .auto-fill-result .af-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px;
+    }
+    .auto-fill-result .af-label { font-size: .72rem; color: var(--text-muted, #999); }
+    .auto-fill-result .af-val   { font-weight: 700; }
+
+    /* ── BB Card Row ── */
+    .bb-card-row {
+      display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px;
+    }
+    .bb-card {
+      padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border, #333);
+      background: var(--surface-3, #31343a); cursor: pointer;
+      font-size: .84rem; font-weight: 600; transition: .12s;
+    }
+    .bb-card:hover {
+      border-color: var(--primary, #3b82f6); background: rgba(59,130,246,.1);
+    }
+    .bb-card.selected {
+      border-color: #10b981; background: rgba(16,185,129,.12);
+      box-shadow: 0 0 0 2px rgba(16,185,129,.3);
+    }
+    .bb-card .bb-label { font-size: .72rem; color: var(--text-muted, #999); }
+
+    /* ── PP Selector ── */
+    .pp-selected-label {
+      font-size: .82rem; font-weight: 700; margin-top: 4px; color: #66bb6a;
+    }
+  </style>
+</head>
+<body class="migration-audit-page">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-title">Migration Audit</div>
+    </div>
+  </header>
+
+  <main class="page-wrap">
+    <div class="app-shell">
+      <section class="main-content">
+        <div class="card">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+              <h1 class="card-title" style="margin-bottom:4px;">Migration Audit</h1>
+              <div class="card-subtitle">Audit-Workflow bleibt unveraendert.</div>
+            </div>
+            <div class="small muted">Login: <span id="sidebarLoginAt">-</span></div>
+          </div>
+
+          <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-6">
+              <label class="form-label small muted">XLSB hochladen (Sheet: <code>Dateie</code>)</label>
+              <input class="form-control" type="file" id="auditFile" accept=".xlsb" data-admin-only />
+            </div>
+            <div class="col-md-6 d-flex gap-2">
+              <button class="btn btn-primary" id="btnImport" data-admin-only>Import in Audit</button>
+              <button class="btn" id="btnReload">Reload</button>
+              <a href="cross-connects.html" class="btn">Zurueck</a>
+              <a href="#" data-action="logout" class="btn">Logout</a>
+            </div>
+          </div>
+
+          <div class="small muted mb-3" id="importMsg"></div>
+
+          <ul class="nav nav-tabs mb-3" id="tabs">
+            <li class="nav-item"><button class="nav-link active" data-status="imported" type="button">To Audit</button></li>
+            <li class="nav-item"><button class="nav-link" data-status="audited" type="button">Audited</button></li>
+          </ul>
+
+          <div class="table-scroll audit-table-scroll">
+            <table class="table table-sm table-striped align-middle" id="auditTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>A ROOM <button type="button" class="audit-filter-btn" data-col="room" title="Filter">⏷</button><span class="badge bg-primary ms-1 d-none audit-filter-badge" data-col="room"></span></th>
+                  <th>Switch <button type="button" class="audit-filter-btn" data-col="switch" title="Filter">⏷</button><span class="badge bg-primary ms-1 d-none audit-filter-badge" data-col="switch"></span></th>
+                  <th>A PP</th>
+                  <th>A Port / EQX</th>
+                  <th>BB IN PP</th>
+                  <th>BB IN Port</th>
+                  <th>BB OUT PP <button type="button" class="audit-filter-btn" data-col="bb_out_pp" title="Filter">⏷</button><span class="badge bg-primary ms-1 d-none audit-filter-badge" data-col="bb_out_pp"></span></th>
+                  <th>BB OUT Port</th>
+                  <th>Kunde RACK</th>
+                  <th>Kunde PP</th>
+                  <th>Kunde PP Port</th>
+                  <th>Product ID</th>
+                  <th>Serial <button type="button" class="audit-filter-btn" data-col="serial" title="Filter">⏷</button><span class="badge bg-primary ms-1 d-none audit-filter-badge" data-col="serial"></span></th>
+                  <th>Konflikte</th>
+                  <th class="text-end actions">Aktion</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="dock-zone" aria-hidden="true"></div>
+
+  <nav class="bottom-dock" aria-label="Hauptnavigation">
+    <div class="dock-meta">
+      <div class="dock-brand">Connection Manager</div>
+      <div class="userbox dock-userbox" id="userBox"></div>
+    </div>
+    <a class="dock-item" href="dashboard.html" data-nav>Dashboard</a>
+    <a class="dock-item" href="kw-planning.html" data-nav>KW Planung</a>
+    <a class="dock-item" href="cross-connects.html" data-nav>Cross Connects</a>
+    <a class="dock-item" href="patchpanels.html" data-nav>Patchpanels</a>
+    <a class="dock-item" href="migration-audit.html" data-nav>Migration Audit</a>
+    <a class="dock-item" href="admin.html" data-nav data-admin-nav style="display:none;">Admin</a>
+  </nav>
+
+  <!-- ════════════════════════════════════════════════════════
+       AUDIT EDIT — Unified Cross-Connect Form (same as KW Install)
+       ════════════════════════════════════════════════════════ -->
+  <div id="auditEditBg" class="modal-bg">
+    <div class="modal-panel">
+      <div class="modal-header">
+        <h3 id="auditModalTitle">Audit bearbeiten</h3>
+        <div style="display:flex; gap:8px;">
+          <button class="btn" id="btnAuditClose">Schliessen</button>
+          <button class="btn btn-primary" id="btnSaveAudit" data-admin-only>Speichern &amp; Uebernehmen</button>
+        </div>
+      </div>
+
+      <div class="info-note">
+        RFRA Switch + Port eingeben &rarr; A-Seite wird automatisch aufgeloest.
+        Kunden-PP eingeben &rarr; Kunde + Raum werden automatisch erkannt.
+        BB IN wird kontextbezogen nach Kundenraum geladen &mdash; BB OUT folgt automatisch via Peer.
+      </div>
+
+      <!-- ── 1. Grunddaten ── -->
+      <div class="form-section">
+        <div class="form-section-title">Grunddaten</div>
+        <div class="form-row">
+          <div><label>Serial</label><input id="auSerial" class="input" placeholder="Serial" /></div>
+          <div><label>Product ID</label><input id="auProductId" class="input" placeholder="Product ID" /></div>
+          <div><label>Kommentar</label><input id="auComment" class="input" placeholder="Technischer Kommentar" /></div>
+        </div>
+      </div>
+
+      <!-- ── 2. A-Seite (RFRA Switch → auto-fill) ── -->
+      <div class="form-section">
+        <div class="form-section-title">A-Seite (RFRA Switch)</div>
+        <div class="form-row">
+          <div style="position:relative;">
+            <label>Switch Name</label>
+            <input id="auSwitchName" class="input" placeholder="z.B. RFRA3211" autocomplete="off" />
+            <div id="auSwitchNameList" class="autocomplete-list"></div>
+          </div>
+          <div style="position:relative;">
+            <label>Switch Port</label>
+            <input id="auSwitchPort" class="input" placeholder="z.B. ETH1/11" autocomplete="off" />
+            <div id="auSwitchPortList" class="autocomplete-list"></div>
+          </div>
+          <div><label>Raum (auto)</label><input id="auARoom" class="input" readonly tabindex="-1" /></div>
+        </div>
+        <div id="auASideResult" class="auto-fill-result" style="display:none;"></div>
+      </div>
+
+      <!-- ── 3. Z-Seite (Kunde) ── -->
+      <div class="form-section">
+        <div class="form-section-title">Z-Seite (Kunde)</div>
+        <div class="form-row">
+          <div style="position:relative;">
+            <label>Kunden Patchpanel</label>
+            <input id="auZPP" class="input" placeholder="z.B. PP:0607:1370187" autocomplete="off" />
+            <div id="auZPPList" class="autocomplete-list"></div>
+          </div>
+          <div><label>Kunde (auto)</label><input id="auZCustomer" class="input" readonly tabindex="-1" /></div>
+          <div><label>Raum (auto)</label><input id="auZRoom" class="input" readonly tabindex="-1" /></div>
+        </div>
+        <div class="form-row">
+          <div><label>Rack</label><input id="auZRack" class="input" readonly tabindex="-1" /></div>
+        </div>
+        <div id="auZPortLabel" class="pp-selected-label" style="display:none;"></div>
+        <div class="port-grid-wrap" id="auZPortGrid"></div>
+      </div>
+
+      <!-- ── 4. BB IN ── -->
+      <div class="form-section">
+        <div class="form-section-title">Backbone IN</div>
+        <div class="small muted" id="auBbInHint">Z-Seite eingeben, um passende BB IN PPs zu sehen.</div>
+        <div id="auBbInCards" class="bb-card-row"></div>
+        <div id="auBbInPortLabel" class="pp-selected-label" style="display:none;"></div>
+        <div class="port-grid-wrap" id="auBbInPortGrid"></div>
+      </div>
+
+      <!-- ── 5. BB OUT (auto via peer) ── -->
+      <div class="form-section">
+        <div class="form-section-title">Backbone OUT <span class="small muted">(automatisch via Peer)</span></div>
+        <div id="auBbOutResult" class="auto-fill-result" style="display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal fade" id="filterModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="filterModalTitle">Filter</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-2">
+            <input id="filterModalSearch" class="form-control form-control-sm" placeholder="Suchen..." />
+          </div>
+          <select id="filterModalSelect" class="form-select form-select-sm" size="12"></select>
+          <div class="form-text mt-1" id="filterModalHint"></div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-sm" id="filterModalClear">Filter loeschen</button>
+          <button class="btn btn-sm btn-primary" id="filterModalApply">Speichern</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="config.js"></script>
+  <script src="nav-auth.js"></script>
+  <script src="migration-audit.js"></script>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Admin</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="topbar-title">Admin</div>
+    </div>
+  </header>
+
+  <main class="page-wrap">
+    <div class="app-shell">
+      <section class="main-content">
+        <div class="card mb-3">
+          <div class="d-flex align-items-center justify-content-between">
+            <div>
+              <h1 class="card-title" style="margin-bottom:4px;">Admin</h1>
+              <div class="card-subtitle">Benutzerverwaltung und Audit Logs.</div>
+            </div>
+            <div class="d-flex gap-2">
+              <a href="cross-connects.html" class="btn">Zurueck</a>
+              <a href="#" data-action="logout" class="btn">Logout</a>
+            </div>
+          </div>
+          <div class="small muted mt-2">Login: <span id="sidebarLoginAt">-</span></div>
+        </div>
+
+        <div class="card mb-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h2 class="card-title" style="margin:0; font-size:1.05rem;">Benutzer</h2>
+            <button class="btn btn-primary" id="btnReloadUsers" data-admin-only>Reload</button>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle" id="usersTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Username</th>
+                  <th>Rolle</th>
+                  <th>Status</th>
+                  <th>Permissions</th>
+                  <th class="text-end">Aktion</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card mb-3">
+          <h2 class="card-title" style="font-size:1.05rem;">User Detail</h2>
+          <div id="userDetailEmpty" class="small muted">Waehle einen Benutzer aus der Liste.</div>
+          <div id="userDetail" class="d-none">
+            <div class="row g-3">
+              <div class="col-lg-4">
+                <div class="small muted">User</div>
+                <div class="fw-semibold" id="detailUsername">-</div>
+                <div class="small muted mt-2">ID: <span id="detailUserId">-</span></div>
+              </div>
+              <div class="col-lg-4">
+                <label class="form-label">Rolle</label>
+                <select class="form-select form-select-sm" id="detailRole">
+                  <option value="viewer">viewer</option>
+                  <option value="techniker">techniker</option>
+                  <option value="admin">admin</option>
+                  <option value="superadmin">superadmin</option>
+                </select>
+                <button class="btn btn-primary mt-2" id="btnUpdateRole" data-admin-only>Rolle speichern</button>
+              </div>
+              <div class="col-lg-4">
+                <label class="form-label">Grant Permission</label>
+                <select class="form-select form-select-sm" id="grantPermission">
+                  <option value="audit:write">audit:write</option>
+                  <option value="upload:write">upload:write</option>
+                  <option value="users:manage">users:manage</option>
+                  <option value="permissions:grant">permissions:grant</option>
+                  <option value="admin:settings">admin:settings</option>
+                  <option value="logs:view">logs:view</option>
+                </select>
+                <label class="form-label mt-2">Gueltig bis (optional)</label>
+                <input type="datetime-local" class="form-control form-control-sm" id="grantValidUntil" />
+                <button class="btn btn-secondary mt-2" id="btnGrant" data-admin-only>Grant</button>
+              </div>
+            </div>
+
+            <hr />
+
+            <h3 class="card-title" style="font-size:1rem;">Aktive Grants</h3>
+            <div class="table-responsive">
+              <table class="table table-sm table-striped align-middle" id="grantsTable">
+                <thead>
+                  <tr>
+                    <th>ID</th>
+                    <th>Permission</th>
+                    <th>Valid From</th>
+                    <th>Valid Until</th>
+                    <th class="text-end">Aktion</th>
+                  </tr>
+                </thead>
+                <tbody></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <h2 class="card-title" style="margin:0; font-size:1.05rem;">Audit Log</h2>
+            <button class="btn" id="btnReloadAudit" data-admin-only>Reload</button>
+          </div>
+          <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-2"><label class="form-label small">Actor ID</label><input class="form-control form-control-sm" id="auditActor" /></div>
+            <div class="col-md-2"><label class="form-label small">Target ID</label><input class="form-control form-control-sm" id="auditTarget" /></div>
+            <div class="col-md-3"><label class="form-label small">Action</label><input class="form-control form-control-sm" id="auditAction" /></div>
+            <div class="col-md-2"><label class="form-label small">Von</label><input type="date" class="form-control form-control-sm" id="auditFrom" /></div>
+            <div class="col-md-2"><label class="form-label small">Bis</label><input type="date" class="form-control form-control-sm" id="auditTo" /></div>
+            <div class="col-md-1 d-grid"><button class="btn btn-primary" id="btnApplyAudit" data-admin-only>Filter</button></div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped align-middle" id="auditTable">
+              <thead>
+                <tr>
+                  <th>Zeit</th>
+                  <th>Actor</th>
+                  <th>Action</th>
+                  <th>Target</th>
+                  <th>Details</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <div class="dock-zone" aria-hidden="true"></div>
+
+  <nav class="bottom-dock" aria-label="Hauptnavigation">
+    <div class="dock-meta">
+      <div class="dock-brand">Connection Manager</div>
+      <div class="userbox dock-userbox" id="userBox"></div>
+    </div>
+    <a class="dock-item" href="dashboard.html" data-nav>Dashboard</a>
+    <a class="dock-item" href="kw-planning.html" data-nav>KW Planung</a>
+    <a class="dock-item" href="cross-connects.html" data-nav>Cross Connects</a>
+    <a class="dock-item" href="patchpanels.html" data-nav>Patchpanels</a>
+    <a class="dock-item" href="migration-audit.html" data-nav>Migration Audit</a>
+    <a class="dock-item" href="admin.html" data-nav data-admin-nav>Admin</a>
+  </nav>
+
+  <script src="config.js"></script>
+  <script src="nav-auth.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
